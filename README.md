@@ -222,4 +222,4 @@ novnc_url = "http://你的服务器IP:6080/vnc.html?autoconnect=true&resize=scal
 
 ## License
 
-待补充。
+MIT
