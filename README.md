@@ -28,6 +28,9 @@
 
 这版重点不是“能跑”，而是**长期更稳地跑**：
 
+- **GitHub Release 检查更新**：Web UI 可直接查看当前版本 / 最新 release / 是否可更新
+- **一键更新 + 备份回滚**：拉取最新 GitHub release tarball，更新前自动备份项目目录，失败自动回滚
+- **重启后本地探活**：更新完成后会自动重启 UI + daemon，并对 `http://127.0.0.1:38110/api/status` 做探活校验
 - **非 root Chromium**：浏览器改为普通服务用户运行，降低 Google 登录风控敏感度
 - **移除 `--no-sandbox`**：不再使用会触发 Google 登录警告的启动参数
 - **browser service 托管化**：浏览器改由独立 systemd service 持续托管，不再是 oneshot 放飞子进程
@@ -309,3 +312,28 @@ curl http://127.0.0.1:38110/api/health
 ## License
 
 MIT
+
+## Web UI 内置更新
+
+现在 38110 Web UI 已支持：
+
+- `检查更新`：检查 GitHub latest release
+- `一键更新`：拉取 latest release tarball 并覆盖当前项目
+- `自动备份`：更新前备份到 `backups/backup-时间戳/`
+- `自动回滚`：更新后如果 UI 探活失败，会自动回滚并重启服务
+
+### 更新来源
+
+优先读取 `agent.toml` 中的：
+
+```toml
+github_repo = "muyouzhi6/flow2api-host-agent"
+```
+
+如果未填写，会自动读取当前 git remote `origin`。
+
+### 推荐做法
+
+- 生产机保持代码尽量对齐正式 release，不要长期停留在 `-dirty` 状态
+- 每次改动合并后发布新 tag / release，再让面板去跟最新 release
+- 更新成功后观察 `/api/health` 是否保持 `ok=true`

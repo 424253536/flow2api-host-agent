@@ -97,10 +97,12 @@
       <div class="hero">
         <div>
           <h2>仪表盘</h2>
-          <p>这里不只是看“成没成功”，还会告诉你：写后校验有没有通过、页面是不是跳到了异常登录页、有没有触发重试、以及当前 AT 过期时间。</p>
+          <p>这里不只是看“成没成功”，还会告诉你：写后校验有没有通过、页面是不是跳到了异常登录页、有没有触发重试、以及当前 AT 过期时间。同时内置了 GitHub Release 检查更新与一键升级。</p>
         </div>
         <div class="hero-actions">
           <form method="post" action="/action/run-once"><button class="btn btn-primary" type="submit">⚡ 立即刷新 Token</button></form>
+          <form method="post" action="/action/check-update"><button class="btn btn-secondary" type="submit">🔎 检查更新</button></form>
+          <form method="post" action="/action/update-release" onsubmit="return confirm('将拉取 GitHub 最新 release 并自动重启 UI + daemon，失败会回滚。确认继续？')"><button class="btn btn-secondary" type="submit">⬆️ 一键更新</button></form>
           <a class="btn btn-secondary" href="/login">🖥️ 打开登录页面</a>
         </div>
       </div>
@@ -125,6 +127,16 @@
         <div class="stat"><div class="label">自动刷新频率</div><div class="value">{{ cfg.refresh_interval_minutes }} 分钟</div></div>
         <div class="stat"><div class="label">下次自动刷新</div><div class="value" style="font-size:18px"><span id="next-refresh-display">{{ next_refresh_display }}</span><div style="font-size:12px;color:var(--muted);margin-top:6px">倒计时：<span id="countdown">—</span></div></div></div>
       </div>
+
+      <div class="cards" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="stat"><div class="label">当前版本</div><div class="value" style="font-size:16px">{{ update.current_version or 'unknown' }}</div></div>
+        <div class="stat"><div class="label">最新 Release</div><div class="value" style="font-size:16px">{{ update.latest_version or '未检查' }}</div></div>
+        <div class="stat"><div class="label">更新状态</div><div class="value" style="font-size:16px">{% if update.updating %}⏳ 更新中{% elif update.update_available %}🆕 可更新{% else %}✅ 稳定{% endif %}</div></div>
+        <div class="stat"><div class="label">健康检查</div><div class="value" style="font-size:16px">{{ '✅ 健康' if health.ok else '⚠️ 异常' }}</div></div>
+      </div>
+
+      {% if update.update_available %}<div class="banner b-info"><strong>🆕 发现新版本</strong><br>{{ update.message }}{% if update.release_url %} · <a href="{{ update.release_url }}" target="_blank">查看 Release</a>{% endif %}</div>{% endif %}
+      {% if update.message %}<div class="banner {{ 'b-warn' if update.last_error else 'b-good' if '通过本地探活' in update.message else 'b-info' }}"><strong>更新系统</strong><br>{{ update.message }}</div>{% endif %}
 
       <div class="cards" style="grid-template-columns:repeat(4,minmax(0,1fr))">
         <div class="stat"><div class="label">写后校验</div><div class="value" style="font-size:18px">{% if state.write_verification %}{{ '✅ 通过' if state.write_verification.verified else '⚠️ 未通过' }}{% else %}—{% endif %}</div></div>
@@ -299,6 +311,11 @@
             <input name="novnc_url" value="{{ cfg.get('novnc_url', '') }}">
             <div class="hint">手机或外部设备访问时，这里不要填 <code>localhost</code>，应填服务器可访问地址。</div>
           </div>
+          <div class="field">
+            <label>GitHub 仓库（可选）</label>
+            <input name="github_repo" value="{{ cfg.get('github_repo', '') }}" placeholder="muyouzhi6/flow2api-host-agent">
+            <div class="hint">留空时会自动读取当前 git remote origin。建议明确填写，方便长期无人托管运行时更稳定。</div>
+          </div>
           <button class="btn btn-primary" type="submit">💾 保存配置</button>
         </form>
       </div>
@@ -351,7 +368,9 @@
 
 {% set refreshed = request.query_params.get('refreshed') %}
 {% set saved = request.query_params.get('saved') %}
-{% if refreshed == '1' %}<div class="toast ok" id="toast">✅ Token 刷新成功</div>{% elif refreshed == '0' %}<div class="toast err" id="toast">❌ Token 刷新失败，请检查登录状态</div>{% elif saved == '1' %}<div class="toast ok" id="toast">💾 配置已保存，并已自动重启 daemon</div>{% endif %}
+{% set checked_update = request.query_params.get('checked_update') %}
+{% set update_started = request.query_params.get('update_started') %}
+{% if refreshed == '1' %}<div class="toast ok" id="toast">✅ Token 刷新成功</div>{% elif refreshed == '0' %}<div class="toast err" id="toast">❌ Token 刷新失败，请检查登录状态</div>{% elif saved == '1' %}<div class="toast ok" id="toast">💾 配置已保存，并已自动重启 daemon</div>{% elif checked_update == '1' %}<div class="toast ok" id="toast">🔎 已重新检查最新 release</div>{% elif update_started == '1' %}<div class="toast ok" id="toast">⬆️ 更新任务已启动，请稍后刷新页面</div>{% endif %}
 
 <script>
   const navBtns = document.querySelectorAll('.nav button');

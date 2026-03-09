@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 agent.toml
 logs/
+update_state.json
+backups/
