@@ -10,12 +10,23 @@ COPY requirements.txt .
 # 安装项目所需的 Python 依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 将你项目里的所有代码复制进容器
+# 将项目里的所有代码复制进容器
 COPY . .
 
-# 暴露 8080 端口（假设项目的 Web 界面跑在这个端口）
-EXPOSE 8080
+# 自动生成一个默认的配置文件，防止程序找不到文件暴毙
+RUN cp agent.example.toml agent.toml
 
-# 启动项目的核心指令（通常 Python 项目入口是 main.py 或 app.py）
-# ⚠️ 注意：如果这个项目的启动文件不叫 main.py，请把你仓库里那个 .py 文件的名字替换到这里
-CMD ["python", "web/app.py"]
+# 暴露作者指定的 38110 端口
+EXPOSE 38110
+
+# 🪄 终极魔法：写一个双拼启动脚本！
+# 让 daemon 在后台运行（加个 & 符号），让 login 在前台运行
+RUN echo '#!/bin/bash\n\
+echo "启动后台守护进程 (daemon)..."\n\
+python scripts/agent.py --config agent.toml daemon &\n\
+echo "启动前台登录网页 (login)..."\n\
+python scripts/agent.py --config agent.toml login\n\
+' > start.sh && chmod +x start.sh
+
+# 告诉 Docker，启动容器时执行我们的双拼脚本
+CMD ["./start.sh"]
