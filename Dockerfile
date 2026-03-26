@@ -18,4 +18,4 @@ EXPOSE 8080
 
 # 启动项目的核心指令（通常 Python 项目入口是 main.py 或 app.py）
 # ⚠️ 注意：如果这个项目的启动文件不叫 main.py，请把你仓库里那个 .py 文件的名字替换到这里
-CMD ["python", "web/main.py"]
+CMD ["python", "web/app.py"]
